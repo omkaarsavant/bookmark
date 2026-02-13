@@ -1,36 +1,43 @@
 'use client'
 
 import { useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import AuthButton from "@/components/AuthButton";
-import { createClient } from "@/lib/supabase/client";
 
 export default function Home() {
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   useEffect(() => {
     const code = searchParams?.get('code');
     
+    // If there's a code from OAuth callback, we need to exchange it for a session
+    // The callback route will handle this
     if (code) {
-      const exchangeCode = async () => {
+      // Use a simple approach: call the callback API endpoint
+      const exchangeCodeViaApi = async () => {
         try {
-          const supabase = createClient();
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          
-          if (!error) {
-            router.push('/dashboard');
-          } else {
-            console.error('Auth error:', error);
+          const response = await fetch('/api/auth/exchange-code', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ code }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              window.location.href = '/dashboard';
+            }
           }
         } catch (err) {
-          console.error('Code exchange error:', err);
+          console.error('Code exchange failed:', err);
         }
       };
-      
-      exchangeCode();
+
+      exchangeCodeViaApi();
     }
-  }, [searchParams, router]);
+  }, [searchParams]);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
