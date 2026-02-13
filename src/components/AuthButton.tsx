@@ -9,12 +9,22 @@ export default function AuthButton() {
     const router = useRouter()
 
     const handleLogin = async () => {
-        await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: `${location.origin}/auth/callback`,
-            },
-        })
+        try {
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${location.origin}/auth/callback`,
+                    skipBrowserRedirect: false,
+                },
+            })
+            if (error) {
+                console.error('OAuth error:', error)
+                alert('Failed to initiate login. Please check console for details.')
+            }
+        } catch (err) {
+            console.error('Login error:', err)
+            alert('An unexpected error occurred during login.')
+        }
     }
 
     return (
