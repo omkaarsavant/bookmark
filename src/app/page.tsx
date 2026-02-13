@@ -1,46 +1,56 @@
 'use client'
 
-import { useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import AuthButton from "@/components/AuthButton";
+import { createClient } from "@/lib/supabase/client";
 
 export default function Home() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const [status, setStatus] = useState<string>('');
 
   useEffect(() => {
     const code = searchParams?.get('code');
     
-    // If there's a code from OAuth callback, we need to exchange it for a session
-    // The callback route will handle this
     if (code) {
-      // Use a simple approach: call the callback API endpoint
-      const exchangeCodeViaApi = async () => {
+      setStatus('Processing authentication...');
+      
+      const exchangeCode = async () => {
         try {
-          const response = await fetch('/api/auth/exchange-code', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ code }),
-          });
+          const supabase = createClient();
+          
+          // Use the browser client to exchange code
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (error) {
+            console.error('Exchange error:', error);
+            setStatus(`Error: ${error.message}`);
+            return;
+          }
 
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-              window.location.href = '/dashboard';
-            }
+          if (data?.session) {
+            setStatus('Success! Redirecting to dashboard...');
+            router.push('/dashboard');
           }
         } catch (err) {
-          console.error('Code exchange failed:', err);
+          console.error('Auth error:', err);
+          setStatus(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
         }
       };
 
-      exchangeCodeViaApi();
+      exchangeCode();
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+      {status && (
+        <div className="absolute top-4 left-4 right-4 bg-blue-900 bg-opacity-50 p-4 rounded text-center max-w-md">
+          <p>{status}</p>
+        </div>
+      )}
+      
       <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
         <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
           <a
