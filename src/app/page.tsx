@@ -1,7 +1,37 @@
+'use client'
 
+import { useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import AuthButton from "@/components/AuthButton";
+import { createClient } from "@/lib/supabase/client";
 
 export default function Home() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  useEffect(() => {
+    const code = searchParams?.get('code');
+    
+    if (code) {
+      const exchangeCode = async () => {
+        try {
+          const supabase = createClient();
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (!error) {
+            router.push('/dashboard');
+          } else {
+            console.error('Auth error:', error);
+          }
+        } catch (err) {
+          console.error('Code exchange error:', err);
+        }
+      };
+      
+      exchangeCode();
+    }
+  }, [searchParams, router]);
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
